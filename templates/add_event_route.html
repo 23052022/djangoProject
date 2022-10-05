@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+
+
+<form action="'add_event" method="'POST">
+    {% csrf_token %}
+
+
+        <div>
+        <label for="event_admin">event_admin</label>
+        <input name="event_admin" id="event_admin" value="Hi" />
+    </div>
+
+       <div>
+        <label for="start_date">start_date</label>
+        <input name="start_date" id="start_date" value="Hi" />
+    </div>
+
+
+           <div>
+        <label for="price">price</label>
+        <input name="price" id="price" value="Hi" />
+    </div>
+
+
+               <div>
+        <label for="description">description</label>
+        <input name="description" id="description" value="Hi" />
+    </div>
+
+
+
+    <div>
+        <button>Send my greetings</button>
+    </div>
+</form>
+</body>
+</html>

@@ -4,7 +4,6 @@ from django.db import models
 from django.utils.translation import gettext_lazy
 
 
-
 # Create your models here.
 
 
@@ -31,10 +30,18 @@ class Route(models.Model):
     )
     duration = models.IntegerField()
 
+
 class Event(models.Model):
     id_route = models.IntegerField()
     event_admin = models.IntegerField()
     approved_users = models.JSONField()
     pending_users = models.JSONField()
-    start_data = models.DateField()
+    start_date = models.DateField()
     price = models.IntegerField()
+    duration = models.IntegerField()
+
+
+class Review(models.Model):
+    route_id = models.CharField(max_length=50)
+    review_text = models.TextField()
+    review_rate = models.IntegerField()

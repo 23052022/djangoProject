@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+
+
+<form action="'add_route" method="'POST">
+    {% csrf_token %}
+    <div>
+        <label for="starting_point">starting_point</label>
+        <input name="starting_point" id="starting_point" value="Hi" />
+    </div>
+
+        <div>
+        <label for="destination">destination</label>
+        <input name="destination" id="destination" value="Hi" />
+    </div>
+
+       <div>
+        <label for="country">country</label>
+        <input name="country" id="country" value="Hi" />
+    </div>
+
+
+           <div>
+        <label for="locationy">location</label>
+        <input name="location" id="location" value="Hi" />
+    </div>
+
+
+               <div>
+        <label for="description">description</label>
+        <input name="description" id="description" value="Hi" />
+    </div>
+
+
+                   <div>
+        <label for="duration">duration</label>
+        <input name="duration" id="duration" value="Hi" />
+    </div>
+
+
+                   <div>
+        <label for="route_type">route_type</label>
+        <input name="route_type" id="route_type" value="Hi" />
+
+    </div>
+    <div>
+        <button type="submit">Send my greetings</button>
+    </div>
+</form>
+</body>
+</html>
