@@ -18,17 +18,17 @@ class Route(models.Model):
     country = models.CharField(max_length=50)
     location = models.CharField(max_length=50)
     description = models.TextField()
+    duration = models.IntegerField()
 
     class RouteType(models.TextChoices):
         Car = 'Car', gettext_lazy('Car')
-        ByFoot = 'Foot', gettext_lazy('Foot')
+        Foot = 'Foot', gettext_lazy('Foot')
 
     route_type = models.CharField(
         max_length=10,
         choices=RouteType.choices,
-        default=RouteType.ByFoot
+        default=RouteType.Foot
     )
-    duration = models.IntegerField()
 
 
 class Event(models.Model):

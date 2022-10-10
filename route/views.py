@@ -2,21 +2,54 @@ from django.contrib.auth import logout, authenticate, login
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
+from django.db import connection
 from route import models
 
 
 # Create your views here.
 def route_filter(request, route_type=None, country=None, location=None):
-    query_filter = {}
+    cursor = connection.cursor()
+    query_filter = []
     if route_type is not None:
-        query_filter['route_type'] = route_type
+        query_filter.append(f"route_type='{route_type}'")
     if country is not None:
-        query_filter['country'] = country
+        query_filter.append(f"country='{country}'")
     if location is not None:
-        query_filter['location'] = location
-    result = models.Route.objects.all().filter(**query_filter)
-    print(result)
-    return HttpResponse('Ok')
+        query_filter.append(f"location='{location}'")
+
+
+
+
+
+    filter_string = 'and'.join(query_filter)
+
+    joining = """SELECT  
+        route_route.country,
+        route_route.destination,
+        route_route.duration,
+        route_route.stopping_point,
+        route_route.route_type,
+        start_point.name,
+        end_point.name
+    
+    FROM route_route
+    JOIN route_places as start_point
+        On start_point.id = route_route.starting_point
+
+        JOIN  route_places as end_point
+            ON end_point.id = route_route.destination
+WHERE  """ + filter_string
+
+    cursor.execute(joining)
+
+    result = cursor.fetchall()
+
+    new_result = [{'country': i[0], 'description': i[1],
+                   'duration': i[2], 'stopping': i[3],
+                   'type': i[4], 'start': i[5],
+                   'end': i[6]} for i in result]
+
+    return HttpResponse(new_result)
 
 
 def route_info(request, id):
@@ -53,18 +86,25 @@ def route_reviews(request, route_id):
 
 
 def route_add_event(request, route_id):
-    if request.method == 'GET':
-        if request.user.has_perm('route.add_event'):
+    if request.user.has_perm('route.add_event'):
+        if request.method == 'GET':
             return render(request, 'add_event_route.html')
-        else:
-            return HttpResponse('Not allowed to add event')
-    if request.method == 'POST':
-        start_date = request.POST.get('start_date')
-        price = request.POST.get('price')
-        new_event = models.Event(start_date=start_date, price=price)
-        new_event.save()
+        if request.method == 'POST':
+            start_date = request.POST.get('start_date')
+            price = request.POST.get('price')
 
-    return HttpResponse('Info event')
+            new_event = models.Event(id_route=route_id,
+                                     event_admin=1,
+                                     approved_users=[],
+                                     pending_users=[],
+                                     start_date=start_date, price=price)
+
+
+            new_event.save()
+            return HttpResponse('Adding event')
+    else:
+
+        return HttpResponse('Not allowed to add event')
 
 
 def user_login(request):
