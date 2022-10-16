@@ -5,6 +5,28 @@ from django.http import HttpResponse
 from django.db import connection
 from route import models
 
+from pymongo import MongoClient
+
+client = MongoClient('localhost', 27017)
+
+
+# class MongoDBConnection():
+#     def __init__(self,username, password hostname,port=27017):
+#         self.hostname= hostname
+#         self.port = port
+#         self.username = username
+#         self.password = password
+#         self.client = None
+
+#
+# def __enter__(self):
+#     CONNECTION_STRING = f"mongodb+srv://{self.username}:{self.password}@{self.hostname}:{self.port}"
+#     self.client = MongoClient(CONNECTION_STRING)
+#     return self.client
+#
+#
+# def __exit__(self, exc_type, exc_value, exc_traceback)
+
 
 # Create your views here.
 def route_filter(request, route_type=None, country=None, location=None):
@@ -17,20 +39,16 @@ def route_filter(request, route_type=None, country=None, location=None):
     if location is not None:
         query_filter.append(f"location='{location}'")
 
-
-
-
-
     filter_string = 'and'.join(query_filter)
 
     joining = """SELECT  
         route_route.country,
-        route_route.destination,
+            route_route.route_type,
+        start_point.name,
+   route_route.destination,
         route_route.duration,
         route_route.stopping_point,
-        route_route.route_type,
-        start_point.name,
-        end_point.name
+         end_point.name
     
     FROM route_route
     JOIN route_places as start_point
@@ -99,7 +117,6 @@ def route_add_event(request, route_id):
                                      pending_users=[],
                                      start_date=start_date, price=price)
 
-
             new_event.save()
             return HttpResponse('Adding event')
     else:
@@ -148,5 +165,32 @@ def route_detail(request, id):
     return HttpResponse(f"{id}")
 
 
-def event_handler(request):
-    pass
+def event_handler(request, event_id):
+    cursor = connection.cursor()
+    joining = f"""SELECT
+    route_event.id_route,
+    route_route.country,
+    route_route.location,
+    route_event.event_admin,
+    route_event.approved_users,
+    route_event.pending_users,
+    route_event.start_date,
+    route_event.price,
+    route_event.duration
+
+    From route_event
+    JOIN route_route
+            On route_event.id_route = route_route.id
+where route_event.id_route = {event_id}    
+    """
+
+    cursor.execute(joining)
+
+    result = cursor.fetchall()
+    print(result)
+    new_result = [{'id_route': i[0], 'country': i[1], 'location': i[2], 'event_admin': i[3],
+                   'approved_users': i[4], 'pending_users': i[5],
+                   'start_date': i[6], 'price': i[7],
+                   'duration': i[8]} for i in result]
+
+    return HttpResponse(new_result)
