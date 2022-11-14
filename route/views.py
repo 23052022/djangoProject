@@ -4,28 +4,12 @@ from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.db import connection
 from route import models
+from mongo_utils import MongoDBConnection
+#from pymongo import MongoClient
 
-from pymongo import MongoClient
-
-client = MongoClient('localhost', 27017)
+#client = MongoClient('localhost', 27017)
 
 
-# class MongoDBConnection():
-#     def __init__(self,username, password hostname,port=27017):
-#         self.hostname= hostname
-#         self.port = port
-#         self.username = username
-#         self.password = password
-#         self.client = None
-
-#
-# def __enter__(self):
-#     CONNECTION_STRING = f"mongodb+srv://{self.username}:{self.password}@{self.hostname}:{self.port}"
-#     self.client = MongoClient(CONNECTION_STRING)
-#     return self.client
-#
-#
-# def __exit__(self, exc_type, exc_value, exc_traceback)
 
 
 # Create your views here.
@@ -71,8 +55,65 @@ WHERE  """ + filter_string
 
 
 def route_info(request, id):
-    result = models.Route.objects.all().filter(id=id)
-    return HttpResponse([{'country': itm.country, 'id': itm.id}] for itm in result)
+    if request.method == "GET":
+        return render(request, 'info_route.html')
+
+    if request.method == "POST":
+        actual_date = datetime.now().strftime('%Y=%m-%d')
+        cursor = connection.cursor()
+
+        sql_query_route = f """SELECT route_route.country,
+                                    route_route.description,
+                                    route_route.duration,
+                                    route_route.stopping_point,
+                                    route_route.route_type,
+                                    route_route.name,
+                                    end_point.name
+                              FROM route_route
+                                    JOIN route_places as start_point
+                                        ON srart_point.id == route_route.starting_point
+                                    JOIN route_places as end_point
+                                        ON end_point.id == route_route.destination
+                                    WHERE route_route.id == '{request.POST,get('id_route')}'"""
+
+        cursor.execute(sql_query_route)
+        result_query_route = cursor.fetchall()
+        if result_query_route:
+            select_route = [{"Country": i[0],
+                             "Description": i[1],
+                             "Duration": i[2],
+                             "Stopping point": i[3],
+                             "Route type":[4],
+                             "Start point": i[5]
+                             "End point": i[6]} for i in result_query_route]
+
+            with MongoDBConnection('admin', 'admin', '127.0.0.1') as db:
+                collec =db['stop_points']
+                stop_point = collec.find_one({"_id": select_route[0]['Stopping point']})
+
+
+            sql_query_event = f"""SELECT event.id,
+                                         event.start_date,
+                                         event.price
+                                  FROM route_event as event
+                                      JOIN route_route as route 
+                                      On route.id == event.id_route
+                                  WHERE route.id == '{request.POST.get('id_route')}
+                                      and event.start_date >='{actual_date}''"""
+
+            cursor.execute(sql_query_event)
+            result_query_route_event = cursor.fetchall()
+            if result_query_route_event:
+                travel_events = [{'ID Event': i[0],
+                                   'Date start event': i[1],
+                                   'Price event': i[2]} for i in result_query_route_event]
+                return HttpResponse([select_route, travel_events, '<br><a href="info_event" >SELECT EVENT</a>',
+                                                                   '<br><a href="add_event" > ADD NEW EVENT</a>'])
+            else:
+                return HttpResponse([select_route, '<br><a href="add_event" >ADD NEW EVENT</a>'])
+        else:
+            return HttpResponse('Route not found')
+
 
 
 def route_add(request, id):

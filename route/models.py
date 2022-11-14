@@ -13,7 +13,7 @@ class Places(models.Model):
 
 class Route(models.Model):
     starting_point = models.IntegerField()
-    stopping_point = models.JSONField()
+    stopping_point = models.CharField()
     destination = models.IntegerField()
     country = models.CharField(max_length=50)
     location = models.CharField(max_length=50)
@@ -34,8 +34,7 @@ class Route(models.Model):
 class Event(models.Model):
     id_route = models.IntegerField()
     event_admin = models.IntegerField()
-    approved_users = models.JSONField()
-    pending_users = models.JSONField()
+    event_users = models.CharField()
     start_date = models.DateField()
     price = models.IntegerField()
     duration = models.IntegerField()
