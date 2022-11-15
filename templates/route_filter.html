@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+
+
+ <form action="page=1" method="POST">
+       {% csrf_token %}
+    <div>
+        <label for="country">Country</label>
+        <select id="country"name="country">
+            {% for country in country_list %}
+        <option value="{{ country }}">{{ country }}</option>
+            {% endfor %}
+        </select>
+        </div>
+
+  <div>
+        <label for="location">Start location</label>
+        <input name="location" id="location" value="" />
+        </div>
+
+ <div>
+     <label for="route_type">Route type</label>
+ </div>
+
+     <a href="registration">Register new user</a>
+
+ </form>
+
+
+</body>
+</html>

@@ -1,5 +1,5 @@
 import uuid
-from random import random
+import random
 
 from pymongo import MongoClient
 
@@ -23,6 +23,7 @@ class MongoDBConnection():
 
 
 if __name__ == '__main__':
+
     with MongoDBConnection('admin', 'admin', '127.0.0.1') as db:
         collection = db['stop_points']
         collection.insert_one({'points': [{'name': f'point_{uuid.uuid4()}', 'lat': random.random(), 'lon': random.random()},

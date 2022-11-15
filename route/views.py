@@ -1,10 +1,17 @@
+import datetime
+import json
+
 from django.contrib.auth import logout, authenticate, login
-from django.contrib.auth.models import User
+#from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.db import connection
 from route import models
 from mongo_utils import MongoDBConnection
+from django.core.exceptions import ValidationError
+from django.core.paginator import Paginator
+
+
 #from pymongo import MongoClient
 
 #client = MongoClient('localhost', 27017)
@@ -13,48 +20,74 @@ from mongo_utils import MongoDBConnection
 
 
 # Create your views here.
-def route_filter(request, route_type=None, country=None, location=None):
-    cursor = connection.cursor()
-    query_filter = []
-    if route_type is not None:
-        query_filter.append(f"route_type='{route_type}'")
-    if country is not None:
-        query_filter.append(f"country='{country}'")
-    if location is not None:
-        query_filter.append(f"location='{location}'")
+def route_filter(request):
+    if request.method =='GET':
+        country_list = set()
+        country_objs = models.Places.objects.all()
+        for itm in range(len(country_objs)):
+            country_list.add(country_objs[itm].name_country)
+        return render(request, 'route_filter.html', {'country_list': country_list})
 
-    filter_string = 'and'.join(query_filter)
 
-    joining = """SELECT  
-        route_route.country,
-            route_route.route_type,
-        start_point.name,
-   route_route.destination,
-        route_route.duration,
-        route_route.stopping_point,
-         end_point.name
+    if request.method == 'POST':
+        cursor = connection.cursor()
+        query_filter = []
+
+        if request.POST.get('route_type') != 'ALL':
+            query_filter.append(f"route_type='{request.POST.get('route_type')}'")
+
+        if request.POST.get('country') != 'ALL':
+            query_filter.append(f"country='{request.POST.get('country')}'")
+
+        if request.POST.get('location') != '':
+            query_filter.append(f"location='{request.POST.get('location')}'")
+
+        if query_filter:
+            filter_str = f"WHERE {' and '.join(query_filter)}"
+        else:
+            filter_str = ""
+
+
+        sql_query = """SELECT  route_route.country,
+                               route_route.description,
+                               route_route.duration,
+                               route_route.stopping_point,
+                               route_route.route_type,
+                               start_point.name,
+                               end_point.name
     
-    FROM route_route
-    JOIN route_places as start_point
-        On start_point.id = route_route.starting_point
+                    FROM route_route
+                        JOIN route_places as start_point
+                            ON start_point.id = route_route.starting_point
+                        JOIN  route_places as end_point
+                            ON end_point.id = route_route.destination"""
 
-        JOIN  route_places as end_point
-            ON end_point.id = route_route.destination
-WHERE  """ + filter_string
+        cursor.execute(sql_query + filter_str)
+        result_query = cursor.fetchall()
 
-    cursor.execute(joining)
-
-    result = cursor.fetchall()
-
-    new_result = [{'country': i[0], 'description': i[1],
-                   'duration': i[2], 'stopping': i[3],
-                   'type': i[4], 'start': i[5],
-                   'end': i[6]} for i in result]
-
-    return HttpResponse(new_result)
+        if result_query:
+            list_route = [{'Country': i[0],
+                           'Description': i[1],
+                           'Duration route': i[2],
+                           'Stopping point': i[3],
+                           'Route type': i[4],
+                           'Start point': i[5],
+                           'End': i[6]} for i in result_query]
 
 
-def route_info(request, id):
+            p = Paginator(list_route, 2)
+
+            num_page = int(request.GET.get('page', default=1))
+            if p.num_pages < num_page:
+                num_page = 1
+            select_page = p.get_page(num_page)
+
+            return HttpResponse(select_page.object_list)
+        else:
+            return HttpResponse('Route not found')
+
+
+def route_info(request):
     if request.method == "GET":
         return render(request, 'info_route.html')
 
@@ -62,7 +95,7 @@ def route_info(request, id):
         actual_date = datetime.now().strftime('%Y=%m-%d')
         cursor = connection.cursor()
 
-        sql_query_route = f """SELECT route_route.country,
+        sql_query_route = f"""SELECT route_route.country,
                                     route_route.description,
                                     route_route.duration,
                                     route_route.stopping_point,
@@ -84,7 +117,7 @@ def route_info(request, id):
                              "Duration": i[2],
                              "Stopping point": i[3],
                              "Route type":[4],
-                             "Start point": i[5]
+                             "Start point": i[5],
                              "End point": i[6]} for i in result_query_route]
 
             with MongoDBConnection('admin', 'admin', '127.0.0.1') as db:
@@ -116,27 +149,53 @@ def route_info(request, id):
 
 
 
-def route_add(request, id):
-    if request.method == 'GET':
-        return render(request, 'add_route.html')
+def route_add(request):
+    if request.user.has_perm('route.add_route'):
+        if request.method == 'GET':
+            places_list = []
+            country_list = set()
+            place_objs = models.Places.objects.all()
+            for itm in range(len(place_objs)):
+                places_list.append(place_objs[itm].name)
+                country_list.add(place_objs[itm].name_country)
+            return render(request, 'add_route.html', {'places_list': places_list,
+                                                      'country_list': country_list,
+                                                      'limit_duratiom': range(1, 11)})
+
     if request.method == 'POST':
-        dest = request.POST.get('destination')
-        start_point = request.POST.get('starting_point')
+        starting_point = request.POST.get('starting_point')
+        destination = request.POST.get('destination')
+        stop_points = request.POST.get('stop_points')
         country = request.POST.get('country')
         location = request.POST.get('location')
         description = request.POST.get('description')
         duration = request.POST.get('duration')
         route_type = request.POST.get('route_type')
 
-        start_obj = models.Places.objects.get(name=start_point)
-        dest_obj = models.Places.objects.get(name=dest)
+        models.validate_stopping_point(stop_points)
+        stop_list = json.loads(stop_points)
 
-        new_route = models.Route(location=location, route_type=route_type,
-                                 starting_point=start_obj.id, destination=dest_obj.id, country=country,
-                                 description=description, duration=duration, stopping_point={}
+        with MongoDBConnection('admin', 'admin', '127.0.0.1') as db:
+            collec = db['stop_points']
+            id_stop_point = collec.insert_one({'points': stop_list}).inserted_id
+
+        start_obj = models.Places.objects.get(name=starting_point)
+        destination_obj = models.Places.objects.get(name=destination)
+
+        new_route = models.Route(starting_point=start_obj.id,
+                                 stopping_point=id_stop_point,
+                                 destination=destination_obj.id,
+                                 country=country,
+                                 location=location,
+                                 description=description,
+                                 duration=duration,
+                                 route_type = route_type
                                  )
+        new_route.full_clean()
         new_route.save()
-    return HttpResponse('Creating a route')
+        return HttpResponse('Creating a route')
+    else:
+        return HttpResponse('Not allowed to add route')
 
 
 def route_reviews(request, route_id):
@@ -148,18 +207,26 @@ def route_add_event(request, route_id):
     if request.user.has_perm('route.add_event'):
         if request.method == 'GET':
             return render(request, 'add_event_route.html')
+
+
         if request.method == 'POST':
+            route_id = request.POST.get('id_route')
             start_date = request.POST.get('start_date')
             price = request.POST.get('price')
 
             new_event = models.Event(id_route=route_id,
+                                     start_date=start_date,
+                                     price=price,
                                      event_admin=1,
-                                     approved_users=[],
-                                     pending_users=[],
-                                     start_date=start_date, price=price)
+                                     approved_users={},
+                                     pending_users={})
+            try:
+                new_event.full_clean()
+                new_event.save()
+            except ValidationError:
+                return HttpResponse('Date error')
 
-            new_event.save()
-            return HttpResponse('Adding event')
+            return HttpResponse('Event added')
     else:
 
         return HttpResponse('Not allowed to add event')
