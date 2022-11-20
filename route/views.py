@@ -6,7 +6,7 @@ from django.contrib.auth import logout, authenticate, login
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.db import connection
-from route import models
+#from route import models
 from mongo_utils import MongoDBConnection
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
@@ -198,9 +198,18 @@ def route_add(request):
         return HttpResponse('Not allowed to add route')
 
 
-def route_reviews(request, route_id):
-    result = models.Review.objects.all().filter(route_id=route_id)
-    return HttpResponse([{'route_id': itm.route_id, 'review_rate': itm.review_rat}] for itm in result)
+def route_reviews(request):
+    if request.method == 'GET':
+        return render(request, 'route_review.html')
+
+    if request.method == 'POST':
+        result = models.Review.objects.all().filter(route_id=request.POST.get('id_route'))
+        if result:
+            return HttpResponse([{'route_id': i.route_id,
+                                  'review_text': i.review_text,
+                                  'review_rate': i.review_rate} for i in result])
+        else:
+            return HttpResponse('Not found reviews', status=404)
 
 
 def route_add_event(request, route_id):
@@ -218,8 +227,8 @@ def route_add_event(request, route_id):
                                      start_date=start_date,
                                      price=price,
                                      event_admin=1,
-                                     approved_users={},
-                                     pending_users={})
+                                     event_admin='fhkg'
+                                     )
             try:
                 new_event.full_clean()
                 new_event.save()
