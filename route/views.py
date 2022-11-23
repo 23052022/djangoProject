@@ -1,15 +1,18 @@
-import datetime
-import json
 
+import json
+from datetime import datetime
 from django.contrib.auth import logout, authenticate, login
-#from django.contrib.auth.models import User
+from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 from django.http import HttpResponse
 from django.db import connection
-#from route import models
+from route import models
 from mongo_utils import MongoDBConnection
+from bson import ObjectId
 from django.core.exceptions import ValidationError
 from django.core.paginator import Paginator
+
+
 
 
 #from pymongo import MongoClient
@@ -226,8 +229,7 @@ def route_add_event(request, route_id):
             new_event = models.Event(id_route=route_id,
                                      start_date=start_date,
                                      price=price,
-                                     event_admin=1,
-                                     event_admin='fhkg'
+                                     event_admin=1
                                      )
             try:
                 new_event.full_clean()
@@ -311,3 +313,10 @@ where route_event.id_route = {event_id}
                    'duration': i[8]} for i in result]
 
     return HttpResponse(new_result)
+
+
+def info_event(request):
+    pass
+
+def add_me_to_event(rquest):
+    pass

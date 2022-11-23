@@ -23,7 +23,7 @@ def validate_stopping_point(value):
 
 
 def validate_route_type(value):
-    if value.title() not in ['Car', 'Foot', 'Bike']
+    if value.title() not in ['Car', 'Foot', 'Bike']:
         raise ValidationError('ERROR')
 
 def validate_date(value):
@@ -65,7 +65,7 @@ class Route(models.Model):
 class Event(models.Model):
     id_route = models.IntegerField()
     event_admin = models.IntegerField()
-    event_users = models.CharField()
+    event_users = models.CharField(max_length=250)
     start_date = models.DateField(validators=[validate_date])
     price = models.IntegerField()
     duration = models.IntegerField()
